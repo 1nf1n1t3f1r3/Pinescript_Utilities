@@ -1,86 +1,107 @@
-//@version=5
-indicator("MAC Spikes", "MS", overlay=false, max_lines_count = 99)
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © toodegrees
+//@version=6
 
-// User inputs
-len = input.int(20, title="Spike stdev length")
+//////////////////////////////
+// This is just a Watermark //
+//////////////////////////////
 
-disp_Spike = input.bool(true, title="Display Spike Histogram?")
-lw = input.int(3, title="Line width")
+indicator('Datestamp', 'Date', overlay = true) // Change name of indicator to change its text on the top left of the chart.
 
-// Calculate the day's change as the difference between the current and previous close
-dayChange = close - close[1]
+//#region[FUNCTIONS]
+boxLoc(_loc) =>
+    loc = switch _loc
+        'Top-Left' => position.top_left
+        'Top-Center' => position.top_center
+        'Top-Right' => position.top_right
+        'Middle-Left' => position.middle_left
+        'Middle-Center' => position.middle_center
+        'Middle-Right' => position.middle_right
+        'Bottom-Left' => position.bottom_left
+        'Bottom-Center' => position.bottom_center
+        'Bottom-Right' => position.bottom_right
+    loc
 
-// Calculate the absolute value of the day's change
-absDayChange = math.abs(dayChange)
-
-// Calculate the average of the absolute values of the past 20 days
-avgAbsChange = ta.sma(absDayChange, len)
-
-// Calculate the spike by dividing today’s change by the average absolute change from the previous day
-spike = dayChange / avgAbsChange[1]
-
-// Conditional plotting based on thresholds
-plotHistogram = disp_Spike ? spike : na
-
-
-negSpikePos = input.bool(true, tooltip="Makes all results positive")
-hider = input.bool(false, tooltip="Hides results below hider value")
-limiter = input.bool(true, tooltip="Sets a max level")
-
-hiderNeg = input.float(-1.5, step = .5)
-hiderPos = input.float(1.52, step = .5)
-
-limiterPos = input.int(5)
-limiterNeg = input.int(-5)
-
-if limiter
-    if spike < 0
-        if spike < limiterNeg
-            spike := limiterNeg
-    if spike > 0
-        if spike > limiterPos
-            spike := limiterPos
-
-// if hider
-//     sigma < 2 = 0
-
-if hider 
-    if spike < 0
-        if spike > hiderNeg
-            spike := 0
-    if spike > 0
-        if spike < hiderPos
-            spike := 0
-
-if negSpikePos and spike < 0
-    spike := spike *-1
+_size(string _size, bool _l = false) =>
+    size = switch _size
+        'Tiny' => not _l ? size.tiny : size.small
+        'Small' => not _l ? size.small : size.normal
+        'Normal' => not _l ? size.normal : size.large
+        'Large' => not _l ? size.large : size.huge
+        'Huge' => not _l ? size.huge : size.huge
+    size
+    //#endregion
 
 
-//Plot
-plot(spike, style=plot.style_columns, color=color.blue, linewidth=lw)
+//#region[INPUTS]
+// QUOTE
+_showQuote = input.bool(false, title = 'Show?', inline = 's1', group = 'Quote')
+_color1 = input.color(#000000, title = '', inline = 's1', group = 'Quote')
+_bgcolor1 = input.color(#d1d4dc, title = '', inline = 's1', group = 'Quote')
+_y1 = input.string('Top', title = '', inline = 's1.2', group = 'Quote', options = ['Top', 'Middle', 'Bottom'])
+_x1 = input.string('Center', title = '', inline = 's1.2', group = 'Quote', options = ['Left', 'Center', 'Right'])
+_size1 = input.string('Large', title = '', inline = 's1.2', group = 'Quote', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge'])
+_quoteTXT = input.text_area('HOMO FABER FORTNAE SUAE', title = 'Quote Text:', group = 'Quote')
 
-//hline(0, "Baseline", color=color.blue, linewidth=lw)
+// SYMBOL INFO
+_showInfo = input.bool(true, title = 'Show?', inline = 's2.1', group = 'Symbol Info')
+_color2 = input.color(#000000, title = '', inline = 's2.1', group = 'Symbol Info')
+_bgcolor2 = input.color(#d1d4dc, title = '', inline = 's2.1', group = 'Symbol Info')
+_y2 = input.string('Top', title = '', inline = 's2.2', group = 'Symbol Info', options = ['Top', 'Middle', 'Bottom'])
+_x2 = input.string('Right', title = '', inline = 's2.2', group = 'Symbol Info', options = ['Left', 'Center', 'Right'])
+_size2 = input.string('Small', title = '', inline = 's2.2', group = 'Symbol Info', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge'])
+_showItext = input.bool(false, title = 'Text?', inline = 's2.3', group = 'Symbol Info')
+_showIsym = input.bool(true, title = 'Symbol?', inline = 's2.3', group = 'Symbol Info')
+_showItf = input.bool(true, title = 'Timeframe?', inline = 's2.3', group = 'Symbol Info')
+_showIdate = input.bool(true, title = 'Date?', inline = 's2.3', group = 'Symbol Info')
+_infoTXT = input.text_area('TOODEGREES', title = 'Info Text:', group = 'Symbol Info')
+//#endregion
 
-one   = input(1)
-two   = input(2)
-three = input(3)
-four = input(4)
-zero = 0
 
-negOne = input(-1)
-negTwo = input(-2)
-negThree = input(-3)
-negFour = input(-4)
+//#region[LOGIC]
+// TABLE LOCATION
+quoteLOC = boxLoc(_y1 + '-' + _x1)
+infoLOC = boxLoc(_y2 + '-' + _x2)
 
-plot(zero, color=color.new(#ffffff, 0))
+// SYMBOL INFO
+date = str.tostring(dayofmonth(time_close)) + '/' + str.tostring(month(time_close)) + '/' + str.tostring(year(time_close))
 
-plot(one, color=color.new(#ffffff, 90))
-plot(two, color=color.new(#ffffff, 75))
-plot(three, color=color.new(#ffffff, 90))
-plot(four, color=color.new(#ffffff, 0))
+num_tf = if timeframe.isminutes
+    if str.tonumber(timeframe.period) % 60 == 0
+        str.tostring(str.tonumber(timeframe.period) / 60)
+    else
+        timeframe.period
+else
+    timeframe.period
 
-plot(negSpikePos ? na : negOne, color=color.new(#ffffff, 90))
-plot(negSpikePos ? na : negTwo, color=color.new(#ffffff, 75))
-plot(negSpikePos ? na : negThree, color=color.new(#ffffff, 90))
-plot(negSpikePos ? na : negFour, color=color.new(#ffffff, 0))
+text_tf = if timeframe.isminutes
+    if str.tonumber(timeframe.period) % 60 == 0
+        'H' + ' TF'
+    else
+        'm' + ' TF'
+else
+    na + ' TF'
+
+tf = num_tf + text_tf
+//#endregion 
+
+
+//#region[PLOT]
+// QUOTE
+_quote = table.new(quoteLOC, 1, 1, frame_color = _color1, frame_width = 1)
+if _showQuote
+    table.cell(_quote, 0, 0, _quoteTXT, text_color = _color1, text_size = _size(_size1), bgcolor = _bgcolor1)
+
+// SYMBOL INFO
+_info = table.new(infoLOC, 1, 4, frame_color = _color2, frame_width = 1)
+if _showInfo
+    if _showItext
+        table.cell(_info, 0, 0, _infoTXT, text_color = _color2, text_halign = 'center', text_size = _size(_size2), bgcolor = _bgcolor2)
+    if _showIsym
+        table.cell(_info, 0, 1, syminfo.ticker, text_color = _color2, text_halign = 'center', text_size = _size(_size2, true), bgcolor = _bgcolor2)
+    if _showItf
+        table.cell(_info, 0, 2, tf, text_color = _color2, text_halign = 'center', text_size = _size(_size2), bgcolor = _bgcolor2)
+    if _showIdate
+        table.cell(_info, 0, 3, date, text_color = _color2, text_halign = 'center', text_size = _size(_size2), bgcolor = _bgcolor2)
+//#endregion
 
