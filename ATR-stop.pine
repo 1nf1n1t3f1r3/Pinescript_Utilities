@@ -1,0 +1,86 @@
+//@version=5
+indicator("MAC Spikes", "MS", overlay=false, max_lines_count = 99)
+
+// User inputs
+len = input.int(20, title="Spike stdev length")
+
+disp_Spike = input.bool(true, title="Display Spike Histogram?")
+lw = input.int(3, title="Line width")
+
+// Calculate the day's change as the difference between the current and previous close
+dayChange = close - close[1]
+
+// Calculate the absolute value of the day's change
+absDayChange = math.abs(dayChange)
+
+// Calculate the average of the absolute values of the past 20 days
+avgAbsChange = ta.sma(absDayChange, len)
+
+// Calculate the spike by dividing today’s change by the average absolute change from the previous day
+spike = dayChange / avgAbsChange[1]
+
+// Conditional plotting based on thresholds
+plotHistogram = disp_Spike ? spike : na
+
+
+negSpikePos = input.bool(true, tooltip="Makes all results positive")
+hider = input.bool(false, tooltip="Hides results below hider value")
+limiter = input.bool(true, tooltip="Sets a max level")
+
+hiderNeg = input.float(-1.5, step = .5)
+hiderPos = input.float(1.52, step = .5)
+
+limiterPos = input.int(5)
+limiterNeg = input.int(-5)
+
+if limiter
+    if spike < 0
+        if spike < limiterNeg
+            spike := limiterNeg
+    if spike > 0
+        if spike > limiterPos
+            spike := limiterPos
+
+// if hider
+//     sigma < 2 = 0
+
+if hider 
+    if spike < 0
+        if spike > hiderNeg
+            spike := 0
+    if spike > 0
+        if spike < hiderPos
+            spike := 0
+
+if negSpikePos and spike < 0
+    spike := spike *-1
+
+
+//Plot
+plot(spike, style=plot.style_columns, color=color.blue, linewidth=lw)
+
+//hline(0, "Baseline", color=color.blue, linewidth=lw)
+
+one   = input(1)
+two   = input(2)
+three = input(3)
+four = input(4)
+zero = 0
+
+negOne = input(-1)
+negTwo = input(-2)
+negThree = input(-3)
+negFour = input(-4)
+
+plot(zero, color=color.new(#ffffff, 0))
+
+plot(one, color=color.new(#ffffff, 90))
+plot(two, color=color.new(#ffffff, 75))
+plot(three, color=color.new(#ffffff, 90))
+plot(four, color=color.new(#ffffff, 0))
+
+plot(negSpikePos ? na : negOne, color=color.new(#ffffff, 90))
+plot(negSpikePos ? na : negTwo, color=color.new(#ffffff, 75))
+plot(negSpikePos ? na : negThree, color=color.new(#ffffff, 90))
+plot(negSpikePos ? na : negFour, color=color.new(#ffffff, 0))
+

@@ -1,0 +1,21 @@
+//@version=6
+indicator('Earnings Markers with Dates', shorttitle = 'Earnings', overlay = true)
+
+Date_Marker = input.bool(defval = true, tooltip = 'Enable/Disable the Date Labels')
+
+// Request earnings for the current stock
+Earnings = request.earnings(syminfo.tickerid, earnings.actual, gaps = barmerge.gaps_on, lookahead = barmerge.lookahead_on)
+
+// Check if there's an earnings report on this bar
+Is_Earnings_Day = not na(Earnings)
+
+// Extract date components from the current bar
+Earnings_Date = str.format('Earnings: {0}-{1}-{2}', year(time), month(time), dayofmonth(time))
+
+// Add a label with the earnings date
+if Is_Earnings_Day and Date_Marker
+    label.new(bar_index, low, Earnings_Date, color = color.blue, textcolor = color.white, size = size.small)
+
+// Plot earnings markers
+plotshape(Is_Earnings_Day, title = 'Is_Earnings_Day', location = location.belowbar, style = shape.triangleup, color = color.blue, size = size.small)
+

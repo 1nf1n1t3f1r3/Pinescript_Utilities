@@ -1,0 +1,97 @@
+//@version=5
+indicator(title="Adam H Grimes' Moving Average Convergence Divergence", shorttitle="AHG MACD", timeframe="", timeframe_gaps=true, overlay=false)
+
+// Reference Line
+macdzeroLine = 0.00
+
+// Inputs
+macdFastLength = input.int(3, title="Fast Line Length")
+macdSlowLength = input.int(10, title="Slow Line Length")
+macdSignalLength = input.int(16, title="Signal Line Length")
+macdBaseLookback = input.int(50, title="Base Lookback Period", step=10)
+macdNearThresholdPercent = input.float(5.0, title="Near High/Low Threshold (%)", step=0.1) // Threshold for marking near highs/lows
+macdAtrLength = input.int(title="ATR Length", defval=10, minval=1) // ATR Length for normalization
+macdHighDecay = input.float(0.95, title="High Decay", step=0.01)
+macdLowDecay = input.float(0.95, title="Low Decay", step=0.01)
+macdUseDynamicLookback = input.bool(true, title="Enable Dynamic Lookback")
+
+// Calculate fastLine and signalLine
+macdFastLine = ((ta.sma(close, macdFastLength) - ta.sma(close, macdSlowLength)) / ta.atr(macdAtrLength)) * 100
+macdSignalLine = ta.sma(macdFastLine, macdSignalLength)
+
+// Calculate dynamic lookback period based on ATR
+macdVolatility = ta.atr(macdAtrLength)
+macdDynamicLookback = macdUseDynamicLookback ? math.max(math.round(macdBaseLookback / (macdVolatility + 1)), 1) : macdBaseLookback
+
+// Ensure dynamicLookback is a valid integer greater than zero
+validLookback = na(macdDynamicLookback) or macdDynamicLookback <= 0 ? 1 : macdDynamicLookback
+
+// Separate fastLine into two series based on macdzeroLine
+macdFastLineAboveZero = macdFastLine >= macdzeroLine ? macdFastLine : na
+macdFastLineBelowZero = macdFastLine <= macdzeroLine ? macdFastLine : na
+
+// Highest and lowest values of fastLine over the dynamic lookback period
+macdNewHigh = ta.highest(macdFastLineAboveZero, validLookback)
+macdNewLow = ta.lowest(macdFastLineAboveZero, validLookback)
+
+// Initialize adjustedNewHigh and adjustedNewLow
+var float adjustedNewHigh = na
+var float adjustedNewLow = na
+
+// Update adjustedNewHigh and adjustedNewLow
+if na(adjustedNewHigh)
+    adjustedNewHigh := macdNewHigh
+else
+    adjustedNewHigh := math.max(macdFastLine, adjustedNewHigh * macdHighDecay)
+
+if na(adjustedNewLow)
+    adjustedNewLow := macdNewLow
+else
+    adjustedNewLow := math.min(macdFastLine, adjustedNewLow * macdLowDecay)
+
+// Detect tops for new highs and bottoms for new lows
+newHighTop = macdFastLine[2] == adjustedNewHigh[2] and macdFastLine[1] == adjustedNewHigh[1] and macdFastLine < adjustedNewHigh
+newLowBottom = macdFastLine[2] == adjustedNewLow[2] and macdFastLine[1] == adjustedNewLow[1] and macdFastLine > adjustedNewLow
+
+// Update adjustedNewHigh and adjustedNewLow based on tops and bottoms
+if newHighTop
+    adjustedNewHigh := macdFastLine[1]
+
+if newLowBottom
+    adjustedNewLow := macdFastLine[1]
+
+// Calculate near high/low thresholds
+nearHighThreshold = adjustedNewHigh * (1 - macdNearThresholdPercent / 100)
+nearLowThreshold = adjustedNewLow * (1 + macdNearThresholdPercent / 100)
+
+// Near new high/low detection with constraints
+nearNewHigh = macdFastLine >= nearHighThreshold and macdFastLine < adjustedNewHigh and macdFastLine > macdzeroLine
+nearNewLow = macdFastLine <= nearLowThreshold and macdFastLine > adjustedNewLow and macdFastLine < macdzeroLine
+
+
+// Plot lines
+plot(macdFastLine, title="Fast Line", color=color.blue)
+plot(macdSignalLine, title="Signal Line", color=color.yellow)
+plot(macdzeroLine, title="Zero Line", color=#0b9968)
+
+// Plot adjusted highest high and lowest low
+plot(adjustedNewHigh, title="Adjusted Highest High", color=color.rgb(255, 255, 255, 75), linewidth=1, style=plot.style_line)
+plot(adjustedNewLow, title="Adjusted Lowest Low", color=color.rgb(255, 255, 255, 75), linewidth=1, style=plot.style_line)
+
+
+// Alert conditions
+isNewHigh = ta.crossover(macdFastLine, adjustedNewHigh)
+isNewLow = ta.crossunder(macdFastLine, adjustedNewLow)
+
+// Combine conditions
+alertCondition = isNewHigh or isNewLow
+
+// Create alert
+alertcondition(alertCondition, title="New MACD High/Low", message="New MACD High/Low detected")
+
+// Display alerts on chart
+bgcolor(macdFastLine >= adjustedNewHigh ? color.new(color.green, 75) : na, title="New High Background")
+bgcolor(macdFastLine <= adjustedNewLow ? color.new(color.red, 75) : na, title="New Low Background")
+bgcolor(nearNewHigh and not (macdFastLine >= adjustedNewHigh) ? color.new(color.green, 75) : na, title="Near New High Background")
+bgcolor(nearNewLow and not (macdFastLine <= adjustedNewLow) ? color.new(color.red, 75) : na, title="Near New Low Background")
+
