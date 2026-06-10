@@ -1,0 +1,219 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Comatus
+
+// Displays Pivots, slightly modified, with an entry level and a stop. 
+// If you're unsure where to enter, or place a stop, consider this to streamline the thought process
+// Forgive the messy code;  it's at least very clear in what it does
+
+//@version=6
+indicator('PED', overlay = true, max_bars_back = 500)
+
+//Pivots
+pivots1 = input.bool(title = '1 Candles before Pivot', group = 'Pivot Settings', tooltip = 'Marks Pivots', defval = false)
+
+//Candles after Pivots
+//NA
+
+//ema
+emaLength = input.int(title = 'EMA Length', defval = 20, minval = 1)
+ema = ta.ema(close, emaLength)
+plot(ema, title = 'ema', color = #00ff00)
+
+//ATR
+atrLength = input.int(title = 'Atr Length', defval = 10, step = 1)
+atr = ta.atr(atrLength)
+atrStops = input(true, title = 'Check to use ATR Stops. Ticks otherwise', group = 'Stop Settings')
+
+//Stops and Targets Inputs
+riskReward = input.float(title = 'Risk/Reward', group = 'Stop Settings', defval = 1, step = .1)
+stopDistance = input.float(title = 'Stop Distance', group = 'Stop Settings', defval = 1.25, step = .25)
+structureToggle = input.bool(title = 'Toggle extra Lookback Length for Stop Distance', group = 'Stop Settings', defval = true)
+stopUnit = atrStops == true ? atr : syminfo.mintick
+
+// //Enable Longs/Shorts
+// enableLongs  = input.bool(title= "Enable Longs", group = "Long/Short", defval=true)
+// enableShorts = input.bool(title= "Enable Shorts", group = "Long/Short", defval=true)
+
+//Pivots
+pivotLongFilterHLHL = high[0] > ema[0] and high[1] > ema[1] and high[2] > ema[2] and close[3] > ema[3]
+HLHL = pivotLongFilterHLHL and high[0] <= high[1] and high[1] > high[2] and high[2] < high[3] and high[1] <= high[3]
+
+pivotLongFilter2 = high[0] > ema[0] and high[1] > ema[1] and close[2] > ema[2]
+pvh12 = pivotLongFilter2 and high[0] <= high[1] and high[1] < high[2] and high[2] >= high[3]
+
+pivotLongFilter3 = high[0] > ema[0] and high[1] > ema[1] and high[2] > ema[2] and close[3] > ema[3]
+pvh13 = pivotLongFilter3 and high[0] <= high[1] and high[1] <= high[2] and high[2] < high[3] and high[3] >= high[4]
+
+pivotLongFilter4 = high[0] > ema[0] and high[1] > ema[1] and high[2] > ema[2] and high[3] > ema[3] and close[4] > ema[4]
+pvh14 = pivotLongFilter4 and high[0] <= high[1] and high[1] <= high[2] and high[2] <= high[3] and high[3] < high[4] and high[4] >= high[5]
+
+pivotLongFilter5 = high[0] > ema[0] and high[1] > ema[1] and high[2] > ema[2] and high[3] > ema[3] and high[4] > ema[4] and close[5] > ema[5]
+pvh15 = pivotLongFilter5 and high[0] <= high[1] and high[1] <= high[2] and high[2] <= high[3] and high[3] <= high[4] and high[4] < high[5] and high[5] >= high[6]
+
+pivotLongFilter6 = high[0] > ema[0] and high[1] > ema[1] and high[2] > ema[2] and high[3] > ema[3] and high[4] > ema[4] and high[5] > ema[5] and close[6] > ema[6]
+pvh16 = pivotLongFilter6 and high[0] <= high[1] and high[1] <= high[2] and high[2] <= high[3] and high[3] <= high[4] and high[4] <= high[5] and high[5] < high[6] and high[6] >= high[7]
+
+pivotLongFilter7 = high[0] > ema[0] and high[1] > ema[1] and high[2] > ema[2] and high[3] > ema[3] and high[4] > ema[4] and high[5] > ema[5] and high[6] > ema[6] and close[7] > ema[7]
+pvh17 = pivotLongFilter7 and high[0] <= high[1] and high[1] <= high[2] and high[2] <= high[3] and high[3] <= high[4] and high[4] <= high[5] and high[5] <= high[6] and high[6] < high[7] and high[7] >= high[8]
+
+//Shorts
+//2 Setup Candles
+pivotShortFilterHLHL = low[0] < ema[0] and low[1] < ema[1] and low[2] < ema[2] and close[3] < ema[3]
+LHLH = pivotShortFilterHLHL and low[0] >= low[1] and low[1] < low[2] and low[2] > low[3] and low[1] >= low[3]
+
+pivotShortFilter2 = low[0] < ema[0] and low[1] < ema[1] and close[2] < ema[2]
+pvl12 = pivotShortFilter2 and low[0] >= low[1] and low[1] > low[2] and low[2] <= low[3]
+
+pivotShortFilter3 = low[0] < ema[0] and low[1] < ema[1] and low[2] < ema[2] and close[3] < ema[3]
+pvl13 = pivotShortFilter3 and low[0] >= low[1] and low[1] >= low[2] and low[2] > low[3] and low[3] <= low[4]
+
+pivotShortFilter4 = low[0] < ema[0] and low[1] < ema[1] and low[2] < ema[2] and low[3] < ema[3] and close[4] < ema[4]
+pvl14 = pivotShortFilter4 and low[0] >= low[1] and low[1] >= low[2] and low[2] >= low[3] and low[3] > low[4] and low[4] <= low[5]
+
+pivotShortFilter5 = low[0] < ema[0] and low[1] < ema[1] and low[2] < ema[2] and low[3] < ema[3] and low[4] < ema[4] and close[5] < ema[5]
+pvl15 = pivotShortFilter5 and low[0] >= low[1] and low[1] >= low[2] and low[2] >= low[3] and low[3] >= low[4] and low[4] > low[5] and low[5] <= low[6]
+
+pivotShortFilter6 = low[0] < ema[0] and low[1] < ema[1] and low[2] < ema[2] and low[3] < ema[3] and low[4] < ema[4] and low[5] < ema[5] and close[6] < ema[6]
+pvl16 = pivotShortFilter6 and low[0] >= low[1] and low[1] >= low[2] and low[2] >= low[3] and low[3] >= low[4] and low[4] >= low[5] and low[5] > low[6] and low[6] <= low[7]
+
+pivotShortFilter7 = low[0] < ema[0] and low[1] < ema[1] and low[2] < ema[2] and low[3] < ema[3] and low[4] < ema[4] and low[5] < ema[5] and low[6] < ema[6] and close[7] < ema[7]
+pvl17 = pivotShortFilter7 and low[0] >= low[1] and low[1] >= low[2] and low[2] >= low[3] and low[3] >= low[4] and low[4] >= low[5] and low[5] >= low[6] and low[6] > low[7] and low[7] <= low[8]
+
+//Defining Entries, Stops and Targets
+//Entry Levels 
+entryLongPrice = high[0] + 1 * syminfo.mintick
+entryShortPrice = low[0] - 1 * syminfo.mintick
+
+//Lookback for Stops
+structureBase = input.int(title = 'Candle Lookback Count', group = 'Stop Settings', defval = 3, minval = 1, step = 1)
+structureExtra = 0
+if (pvh13 or pvl13) and structureToggle
+    structureExtra := 1
+    structureExtra
+
+if (pvh14 or pvl14) and structureToggle
+    structureExtra := 2
+    structureExtra
+
+if (pvh15 or pvl15) and structureToggle
+    structureExtra := 3
+    structureExtra
+
+if (pvh16 or pvl16) and structureToggle
+    structureExtra := 4
+    structureExtra
+
+if (pvh17 or pvl17) and structureToggle
+    structureExtra := 5
+    structureExtra
+
+structureTotal = structureBase + structureExtra
+
+
+//Stops and Targets
+stopSize = stopDistance * stopUnit
+longTradeStopPrice = 0.0
+longTradeTargetPrice = 0.0
+shortTradeStopPrice = 0.0
+shortTradeTargetPrice = 0.0
+longEntryStopSize = entryLongPrice - ta.lowest(low, structureTotal) + stopSize
+shortEntryStopSize = ta.highest(high, structureTotal) - entryShortPrice + stopSize
+
+//Marking Trade Stops and Targets
+//Longs
+if HLHL or pvh12 or pvh13 or pvh14 or pvh15 or pvh16 or pvh17
+    longTradeStopPrice := entryLongPrice - longEntryStopSize
+    longTradeTargetPrice := entryLongPrice + longEntryStopSize * riskReward
+    longTradeTargetPrice
+
+//Shorts
+if LHLH or pvl12 or pvl13 or pvl14 or pvl15 or pvl16 or pvl17
+    shortTradeStopPrice := entryShortPrice + shortEntryStopSize
+    shortTradeTargetPrice := entryShortPrice - shortEntryStopSize * riskReward
+    shortTradeTargetPrice
+
+//
+// Alaerts
+//
+
+alertcondition(HLHL or LHLH or pvh12 or pvh13 or pvh14 or pvh15 or pvh16 or pvh17 or LHLH or pvl12 or pvl13 or pvl14 or pvl15 or pvl16 or pvl17, title = 'Entry Conditions Appeared')
+alertcondition(HLHL or pvh12 or pvh13 or pvh14 or pvh15 or pvh16 or pvh17, title = 'Long Entry Conditions Appeared')
+alertcondition(LHLH or pvl12 or pvl13 or pvl14 or pvl15 or pvl16 or pvl17, title = 'Short Conditions Appeared')
+
+
+// //Plots
+// plotshape(pivots1 ? HLHL : na, location=location.abovebar, color=color.aqua, style=shape.triangleup, size=size.auto, offset =-2)
+// plotshape(pivots1 ? pvh12 : na, location=location.abovebar, color=color.aqua, style=shape.triangleup, size=size.auto, offset =-2)
+// plotshape(pivots1 ? pvh13 : na, location=location.abovebar, color=color.aqua, style=shape.triangleup, size=size.auto, offset =-3)
+// plotshape(pivots1 ? pvh14 : na, location=location.abovebar, color=color.aqua, style=shape.triangleup, size=size.auto, offset =-4)
+// plotshape(pivots1 ? pvh15 : na, location=location.abovebar, color=color.aqua, style=shape.triangleup, size=size.auto, offset =-5)
+// plotshape(pivots1 ? pvh16 : na, location=location.abovebar, color=color.aqua, style=shape.triangleup, size=size.auto, offset =-6)
+// plotshape(pivots1 ? pvh17 : na, location=location.abovebar, color=color.aqua, style=shape.triangleup, size=size.auto, offset =-7)
+
+// //Shorts
+// plotshape(pivots1 ? LHLH : na, location=location.belowbar, color=color.orange, style=shape.triangledown, size=size.auto, offset =-2)
+// plotshape(pivots1 ? pvl12 : na, location=location.belowbar, color=color.orange, style=shape.triangledown, size=size.auto, offset =-2)
+// plotshape(pivots1 ? pvl13 : na, location=location.belowbar, color=color.orange, style=shape.triangledown, size=size.auto, offset =-3)
+// plotshape(pivots1 ? pvl14 : na, location=location.belowbar, color=color.orange, style=shape.triangledown, size=size.auto, offset =-4)
+// plotshape(pivots1 ? pvl15 : na, location=location.belowbar, color=color.orange, style=shape.triangledown, size=size.auto, offset =-5)
+// plotshape(pivots1 ? pvl16 : na, location=location.belowbar, color=color.orange, style=shape.triangledown, size=size.auto, offset =-6)
+// plotshape(pivots1 ? pvl17 : na, location=location.belowbar, color=color.orange, style=shape.triangledown, size=size.auto, offset =-7)
+
+//Plot Entry, Stop, Target
+//Longs
+plot(HLHL ? longTradeStopPrice : na, title = 'Long Stop Price', color = color.orange, style = plot.style_linebr, linewidth = 1)
+plot(HLHL ? longTradeTargetPrice : na, title = 'Long Target Price', color = color.aqua, style = plot.style_linebr, linewidth = 1)
+plot(HLHL ? entryLongPrice : na, title = 'Entry Long', color = color.white, style = plot.style_linebr, linewidth = 1)
+
+plot(pvh12 ? longTradeStopPrice : na, title = 'Long Stop Price', color = color.orange, style = plot.style_linebr, linewidth = 1)
+plot(pvh12 ? longTradeTargetPrice : na, title = 'Long Target Price', color = color.aqua, style = plot.style_linebr, linewidth = 1)
+plot(pvh12 ? entryLongPrice : na, title = 'Entry Long', color = color.white, style = plot.style_linebr, linewidth = 1)
+
+plot(pvh13 ? longTradeStopPrice : na, title = 'Long Stop Price', color = color.orange, style = plot.style_linebr, linewidth = 1)
+plot(pvh13 ? longTradeTargetPrice : na, title = 'Long Target Price', color = color.aqua, style = plot.style_linebr, linewidth = 1)
+plot(pvh13 ? entryLongPrice : na, title = 'Entry Long', color = color.white, style = plot.style_linebr, linewidth = 1)
+
+plot(pvh14 ? longTradeStopPrice : na, title = 'Long Stop Price', color = color.orange, style = plot.style_linebr, linewidth = 1)
+plot(pvh14 ? longTradeTargetPrice : na, title = 'Long Target Price', color = color.aqua, style = plot.style_linebr, linewidth = 1)
+plot(pvh14 ? entryLongPrice : na, title = 'Entry Long', color = color.white, style = plot.style_linebr, linewidth = 1)
+
+plot(pvh15 ? longTradeStopPrice : na, title = 'Long Stop Price', color = color.orange, style = plot.style_linebr, linewidth = 1)
+plot(pvh15 ? longTradeTargetPrice : na, title = 'Long Target Price', color = color.aqua, style = plot.style_linebr, linewidth = 1)
+plot(pvh15 ? entryLongPrice : na, title = 'Entry Long', color = color.white, style = plot.style_linebr, linewidth = 1)
+
+plot(pvh16 ? longTradeStopPrice : na, title = 'Long Stop Price', color = color.orange, style = plot.style_linebr, linewidth = 1)
+plot(pvh16 ? longTradeTargetPrice : na, title = 'Long Target Price', color = color.aqua, style = plot.style_linebr, linewidth = 1)
+plot(pvh16 ? entryLongPrice : na, title = 'Entry Long', color = color.white, style = plot.style_linebr, linewidth = 1)
+
+plot(pvh17 ? longTradeStopPrice : na, title = 'Long Stop Price', color = color.orange, style = plot.style_linebr, linewidth = 1)
+plot(pvh17 ? longTradeTargetPrice : na, title = 'Long Target Price', color = color.aqua, style = plot.style_linebr, linewidth = 1)
+plot(pvh17 ? entryLongPrice : na, title = 'Entry Long', color = color.white, style = plot.style_linebr, linewidth = 1)
+
+//Shorts
+plot(LHLH ? shortTradeStopPrice : na, title = 'Short Stop Price', color = color.orange, style = plot.style_linebr, linewidth = 1)
+plot(LHLH ? shortTradeTargetPrice : na, title = 'Short Target Price', color = color.aqua, style = plot.style_linebr, linewidth = 1)
+plot(LHLH ? entryShortPrice : na, title = 'Entry Short', color = color.white, style = plot.style_linebr, linewidth = 1)
+
+plot(pvl12 ? shortTradeStopPrice : na, title = 'Short Stop Price', color = color.orange, style = plot.style_linebr, linewidth = 1)
+plot(pvl12 ? shortTradeTargetPrice : na, title = 'Short Target Price', color = color.aqua, style = plot.style_linebr, linewidth = 1)
+plot(pvl12 ? entryShortPrice : na, title = 'Entry Short', color = color.white, style = plot.style_linebr, linewidth = 1)
+
+plot(pvl13 ? shortTradeStopPrice : na, title = 'Short Stop Price', color = color.orange, style = plot.style_linebr, linewidth = 1)
+plot(pvl13 ? shortTradeTargetPrice : na, title = 'Short Target Price', color = color.aqua, style = plot.style_linebr, linewidth = 1)
+plot(pvl13 ? entryShortPrice : na, title = 'Entry Short', color = color.white, style = plot.style_linebr, linewidth = 1)
+
+plot(pvl14 ? shortTradeStopPrice : na, title = 'Short Stop Price', color = color.orange, style = plot.style_linebr, linewidth = 1)
+plot(pvl14 ? shortTradeTargetPrice : na, title = 'Short Target Price', color = color.aqua, style = plot.style_linebr, linewidth = 1)
+plot(pvl14 ? entryShortPrice : na, title = 'Entry Short', color = color.white, style = plot.style_linebr, linewidth = 1)
+
+plot(pvl15 ? shortTradeStopPrice : na, title = 'Short Stop Price', color = color.orange, style = plot.style_linebr, linewidth = 1)
+plot(pvl15 ? shortTradeTargetPrice : na, title = 'Short Target Price', color = color.aqua, style = plot.style_linebr, linewidth = 1)
+plot(pvl15 ? entryShortPrice : na, title = 'Entry Short', color = color.white, style = plot.style_linebr, linewidth = 1)
+
+plot(pvl16 ? shortTradeStopPrice : na, title = 'Short Stop Price', color = color.orange, style = plot.style_linebr, linewidth = 1)
+plot(pvl16 ? shortTradeTargetPrice : na, title = 'Short Target Price', color = color.aqua, style = plot.style_linebr, linewidth = 1)
+plot(pvl16 ? entryShortPrice : na, title = 'Entry Short', color = color.white, style = plot.style_linebr, linewidth = 1)
+
+plot(pvl17 ? shortTradeStopPrice : na, title = 'Short Stop Price', color = color.orange, style = plot.style_linebr, linewidth = 1)
+plot(pvl17 ? shortTradeTargetPrice : na, title = 'Short Target Price', color = color.aqua, style = plot.style_linebr, linewidth = 1)
+plot(pvl17 ? entryShortPrice : na, title = 'Entry Short', color = color.white, style = plot.style_linebr, linewidth = 1)
