@@ -1,0 +1,1 @@
+Repo containing some Technical Analysis tools for Pinescripe (and a bonus Python version). Meant for Demonstration, Support or Tinkering; nothing here should be taken as direct Buy/Sell Recommendations. 
