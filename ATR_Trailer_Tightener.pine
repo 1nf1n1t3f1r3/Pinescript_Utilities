@@ -1,0 +1,82 @@
+//@version=6
+indicator('Tightening Trailing Stop Loss', shorttitle = 'TTSL', overlay = true)
+
+// Litle tool to independently simulate a Trailing Stop
+// Enter the start as the entry bar (not the day before on which the stop is set)
+// Since it only moves in the direction of risk, it requires resetting for each individual trade
+// Helpful if you only want something to trail a Stop and nothing else
+
+// If you have a strategy of your own and want to add a Trailing Stop, consider copy/pasting this into your own strategy
+// You'd want to replace the 'start_date', which is the requirement for displaying the Trailing Stop, with the entry conditions of your own strategy. 
+
+// Input parameters
+length = input.int(title = 'Length', defval = 10, minval = 1)
+smoothing = input.string(title = 'Smoothing', defval = 'RMA', options = ['RMA', 'SMA', 'EMA', 'WMA'])
+ma_function(source, length) =>
+    switch smoothing
+        'RMA' => ta.rma(source, length)
+        'SMA' => ta.sma(source, length)
+        'EMA' => ta.ema(source, length)
+        => ta.wma(source, length)
+
+atr_value = ta.atr(length)
+
+atr_trail_multiplier_initial = input.float(0.5, step = 0.1, title = 'ATR Trail Multiplier Initial')
+atr_trail_decay = input.float(0.95, step = 0.1, title = 'ATR Trail Decay')
+lookback_period = input.int(3, title = 'Rolling Lookback Period')
+start_date = input.time(timestamp('2026-06-01 00:00'), title = 'Start Date')
+
+enable_long_trail = input.bool(true, title = 'Enable Long Trailing Stop')
+enable_short_trail = input.bool(true, title = 'Enable Short Trailing Stop')
+
+// Track whether the trade is active or has been stopped out ---
+var bool long_active = false
+var bool short_active = false
+
+// Trigger trade activation at the start date (and reset multipliers)
+if ta.crossover(time, start_date)
+    if enable_long_trail
+        long_active := true
+    if enable_short_trail
+        short_active := true
+
+// Initialize variables
+var float atr_trail_multiplier_long = atr_trail_multiplier_initial
+var float atr_trail_multiplier_short = atr_trail_multiplier_initial
+var float trailing_stop_loss_long = na
+var float trailing_stop_loss_short = na
+
+rolling_min_lows = ta.lowest(low, lookback_period)
+rolling_max_highs = ta.highest(high, lookback_period)
+
+// Long Trailing Stop Logic ---
+if long_active
+    trailing_stop_loss_long := na(trailing_stop_loss_long) ? rolling_min_lows - atr_value * atr_trail_multiplier_long : math.max(trailing_stop_loss_long, rolling_min_lows - atr_value * atr_trail_multiplier_long)
+    atr_trail_multiplier_long := atr_trail_multiplier_long * atr_trail_decay
+    
+    // Check if stopped out (Low breaks below the Trailing Stop)
+    if low <= trailing_stop_loss_long
+        long_active := false
+        trailing_stop_loss_long := na // Erases the line from this point forward
+else
+    // Reset if not active so it's fresh for the next manual start_date change
+    trailing_stop_loss_long := na
+    atr_trail_multiplier_long := atr_trail_multiplier_initial
+
+// Short Trailing Stop Logic ---
+if short_active
+    trailing_stop_loss_short := na(trailing_stop_loss_short) ? rolling_max_highs + atr_value * atr_trail_multiplier_short : math.min(trailing_stop_loss_short, rolling_max_highs + atr_value * atr_trail_multiplier_short)
+    atr_trail_multiplier_short := atr_trail_multiplier_short * atr_trail_decay
+    
+    // Check if stopped out (High breaks above the Trailing Stop)
+    if high >= trailing_stop_loss_short
+        short_active := false
+        trailing_stop_loss_short := na // Erases the line from this point forward
+else
+    // Reset if not active
+    trailing_stop_loss_short := na
+    atr_trail_multiplier_short := atr_trail_multiplier_initial
+
+// Plotting
+plot(enable_long_trail ? trailing_stop_loss_long : na, color = color.green, linewidth = 2, title = 'Long Trailing Stop Loss', style = plot.style_linebr)
+plot(enable_short_trail ? trailing_stop_loss_short : na, color = color.red, linewidth = 2, title = 'Short Trailing Stop Loss', style = plot.style_linebr)
